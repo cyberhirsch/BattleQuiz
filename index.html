@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BattleQuiz — Türkçe / English turn-based quiz duel</title>
+<meta name="description" content="A two-player, turn-based, bilingual (Turkish / English) multiple-choice quiz with age-tuned question banks and a double-or-nothing bomb round.">
+<meta name="theme-color" content="#0d1024">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💣</text></svg>">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============ SETUP ============ -->
+  <section class="screen is-active" id="screen-setup">
+    <header class="brand">
+      <h1 class="brand__title">Battle<span>Quiz</span></h1>
+      <p class="brand__tagline" data-i18n="tagline"></p>
+    </header>
+
+    <div class="uilang">
+      <button class="uilang__btn" data-uilang="en" type="button">English</button>
+      <button class="uilang__btn" data-uilang="tr" type="button">Türkçe</button>
+    </div>
+
+    <form class="card setup" id="setup-form" autocomplete="off" novalidate>
+      <h2 class="card__title" data-i18n="setup"></h2>
+
+      <div class="setup__players">
+        <fieldset class="pcard" data-player="0">
+          <legend><span data-i18n="player"></span> 1</legend>
+          <label><span data-i18n="name"></span>
+            <input type="text" id="p0-name" value="Kaan" maxlength="16" required>
+          </label>
+          <div class="pcard__row">
+            <label><span data-i18n="age"></span>
+              <input type="number" id="p0-age" value="12" min="5" max="120" required>
+            </label>
+            <label><span data-i18n="language"></span>
+              <select id="p0-bank">
+                <option value="tr12">Türkçe · 12</option>
+                <option value="en49">English · 49</option>
+              </select>
+            </label>
+          </div>
+          <p class="pcard__meta" id="p0-meta"></p>
+        </fieldset>
+
+        <div class="setup__vs" data-i18n="vs"></div>
+
+        <fieldset class="pcard" data-player="1">
+          <legend><span data-i18n="player"></span> 2</legend>
+          <label><span data-i18n="name"></span>
+            <input type="text" id="p1-name" value="Dave" maxlength="16" required>
+          </label>
+          <div class="pcard__row">
+            <label><span data-i18n="age"></span>
+              <input type="number" id="p1-age" value="49" min="5" max="120" required>
+            </label>
+            <label><span data-i18n="language"></span>
+              <select id="p1-bank">
+                <option value="tr12">Türkçe · 12</option>
+                <option value="en49" selected>English · 49</option>
+              </select>
+            </label>
+          </div>
+          <p class="pcard__meta" id="p1-meta"></p>
+        </fieldset>
+      </div>
+
+      <div class="setup__opts">
+        <label><span data-i18n="rounds"></span>
+          <select id="opt-rounds">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="15">15</option>
+            <option value="20">20</option>
+          </select>
+        </label>
+        <label><span data-i18n="bombChance"></span>
+          <select id="opt-bomb">
+            <option value="low" data-i18n="bombLow"></option>
+            <option value="normal" selected data-i18n="bombNormal"></option>
+            <option value="high" data-i18n="bombHigh"></option>
+          </select>
+        </label>
+        <label class="toggle">
+          <span data-i18n="sound"></span>
+          <button type="button" id="opt-sound" class="toggle__btn" aria-pressed="true"></button>
+        </label>
+      </div>
+
+      <p class="setup__error" id="setup-error" role="alert" hidden></p>
+      <button class="btn btn--primary btn--big" type="submit" data-i18n="start"></button>
+
+      <details class="howto">
+        <summary data-i18n="howto"></summary>
+        <p data-i18n="howtoText"></p>
+      </details>
+    </form>
+  </section>
+
+  <!-- ============ HAND-OVER ============ -->
+  <section class="screen" id="screen-handover">
+    <div class="card handover">
+      <p class="handover__pass" id="ho-pass"></p>
+      <h2 class="handover__name" id="ho-name"></h2>
+      <p class="handover__hint" id="ho-hint"></p>
+      <p class="handover__round" id="ho-round"></p>
+      <p class="handover__steals" id="ho-steals"></p>
+      <button class="btn btn--primary btn--big" id="ho-go" type="button"></button>
+      <button class="btn btn--steal" id="ho-steal" type="button" hidden></button>
+    </div>
+  </section>
+
+  <!-- ============ BOMB CHOICE ============ -->
+  <section class="screen" id="screen-bomb">
+    <div class="card bomb">
+      <div class="bomb__icon" aria-hidden="true">💣</div>
+      <h2 class="bomb__title" id="bomb-title"></h2>
+      <p class="bomb__text" id="bomb-text"></p>
+      <p class="bomb__stake" id="bomb-stake"></p>
+      <div class="bomb__actions">
+        <button class="btn btn--danger btn--big" id="bomb-risk" type="button"></button>
+        <button class="btn btn--ghost" id="bomb-safe" type="button"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEAL CHOICE ============ -->
+  <section class="screen" id="screen-steal">
+    <div class="card heist">
+      <div class="heist__icon" aria-hidden="true">💰</div>
+      <h2 class="heist__title" id="steal-title"></h2>
+      <p class="heist__text" id="steal-text"></p>
+      <p class="heist__stake" id="steal-stake"></p>
+      <div class="heist__actions">
+        <button class="btn btn--steal btn--big" id="steal-go" type="button"></button>
+        <button class="btn btn--ghost" id="steal-cancel" type="button"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUESTION ============ -->
+  <section class="screen" id="screen-quiz">
+    <div class="hud">
+      <div class="hud__side" id="hud-p0"></div>
+      <div class="hud__mid">
+        <div class="hud__round" id="hud-round"></div>
+        <div class="timer" id="timer">
+          <svg viewBox="0 0 40 40" aria-hidden="true">
+            <circle class="timer__track" cx="20" cy="20" r="17"></circle>
+            <circle class="timer__bar" id="timer-bar" cx="20" cy="20" r="17"></circle>
+          </svg>
+          <span class="timer__num" id="timer-num"></span>
+        </div>
+      </div>
+      <div class="hud__side" id="hud-p1"></div>
+    </div>
+
+    <div class="qwrap" id="qwrap">
+      <div class="qmeta">
+        <span class="chip" id="q-cat"></span>
+        <span class="chip" id="q-diff"></span>
+        <span class="chip chip--bomb" id="q-bomb" hidden></span>
+        <span class="chip chip--steal" id="q-steal" hidden></span>
+      </div>
+      <h2 class="question" id="q-text"></h2>
+      <div class="answers" id="answers"></div>
+    </div>
+
+    <div class="feedback" id="feedback" hidden>
+      <div class="feedback__verdict" id="fb-verdict"></div>
+      <div class="feedback__detail" id="fb-detail"></div>
+      <div class="feedback__delta" id="fb-delta"></div>
+      <button class="btn btn--primary btn--big" id="fb-next" type="button"></button>
+    </div>
+
+    <button class="quit" id="quit-btn" type="button"></button>
+  </section>
+
+  <!-- ============ RESULT ============ -->
+  <section class="screen" id="screen-result">
+    <div class="card result">
+      <h2 class="card__title" id="res-title"></h2>
+      <div class="result__crown" id="res-crown" aria-hidden="true">🏆</div>
+      <h3 class="result__winner" id="res-winner"></h3>
+      <div class="result__grid" id="res-grid"></div>
+      <div class="result__actions">
+        <button class="btn btn--primary btn--big" id="res-again" type="button"></button>
+        <button class="btn btn--ghost" id="res-setup" type="button"></button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="assets/js/i18n.js"></script>
+<script src="assets/js/questions.tr12.js"></script>
+<script src="assets/js/questions.en49.js"></script>
+<script src="assets/js/audio.js"></script>
+<script src="assets/js/game.js"></script>
+</body>
+</html>
