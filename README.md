@@ -71,8 +71,8 @@ if the button is missing, that's why, not a bug.
 
 ## Question bank
 
-The bank holds **964 questions**, roughly 95 per topic, spread across all eight
-difficulty levels — between 8 and 15 in every topic-and-level cell. Questions
+The bank holds **1,181 questions** — multiple-choice and true-or-false mixed
+together — spread across ten topics and all eight difficulty levels. Questions
 live in `assets/js/questions/`, one file per topic. Each entry carries both
 languages:
 
