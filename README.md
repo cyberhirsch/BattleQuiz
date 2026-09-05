@@ -70,8 +70,10 @@ if the button is missing, that's why, not a bug.
 
 ## Question bank
 
-Questions live in `assets/js/questions/`, one file per topic. Each entry carries
-both languages:
+The bank holds **964 questions**, roughly 95 per topic, spread across all eight
+difficulty levels — between 8 and 15 in every topic-and-level cell. Questions
+live in `assets/js/questions/`, one file per topic. Each entry carries both
+languages:
 
 ```js
 { id:"sci05", t:"science", d:3, c:0,
@@ -87,6 +89,22 @@ both languages:
 Options are shuffled at runtime, so the correct answer never sits in a
 predictable slot. A question is spent for the whole match once anyone has been
 asked it — on a shared device everybody hears it.
+
+### How the bank was built
+
+Most of it was written by a fan-out of agents: one writer per topic-and-level
+cell, each batch then read by two independent checkers — one on facts, one on
+Turkish fidelity and difficulty fit. A question shipped only if both kept it,
+and roughly one in six was rejected.
+
+The checkers policed both ends of the difficulty band, not just correctness. A
+level 7 question on tomatoes being nightshades was thrown out as too easy; a
+level 1 question asking which country the Eiffel Tower is in was thrown out as
+too hard for a five-year-old. Turkish that read as machine translation was
+rejected even where the fact was sound.
+
+Merging then dropped anything that duplicated an existing question, comparing
+normalised text with Turkish case-folding plus a token-overlap threshold.
 
 ### Adding questions
 
