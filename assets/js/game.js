@@ -20,6 +20,8 @@
   var TIME_NORMAL = 20;
   var TIME_BOMB = 25;
   var TIER_VALUE = [100, 200, 300];   // points by tier within your own band
+  var TF_VALUE_SHARE = 0.6;   // a coin flip should not pay like a four-way choice
+  var TF_ROUND_SHARE = 0.3;   // roughly this fraction of rounds are true-or-false
   var TIME_BONUS_SHARE = 0.5;
   var STREAK_BONUS = 20;
   var MAX_STREAK_BONUS = 100;
@@ -43,6 +45,7 @@
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
   function T(key, vars) { return window.t(state.uiLang, key, vars); }
   function topicName(topic) { return T(TOPIC_KEY[topic] || topic); }
+  function isTf(q) { return q.k === "tf"; }
 
   // Age decides the difficulty window. The bands are three levels wide and
   // stepped so a child and an adult never draw from the same pool.
@@ -224,16 +227,27 @@
     return shuffle(pool).slice(0, Math.min(count, pool.length)).sort(function (a, b) { return a - b; });
   }
 
-  // One shared tier per round. Everybody meets the same shape of match; only
-  // the absolute level differs, so no age bracket earns more for equal play.
+  // One shared tier AND one shared question kind per round. Everybody meets the
+  // same shape of match; only the absolute level differs, so no age bracket
+  // earns more for equal play - and nobody gets a cheap true-or-false in a
+  // round where their rivals face four options.
   function buildPlan(rounds, bombRounds) {
     var mix = [0, 1, 0, 1, 2, 0, 1, 1, 0, 2];
     var plan = [], bag = shuffle(mix);
     for (var i = 0; i < rounds; i++) {
       if (!bag.length) bag = shuffle(mix);
-      plan.push(bag.pop());
+      plan.push({ tier: bag.pop(), tf: false });
     }
-    bombRounds.forEach(function (r) { if (r <= rounds) plan[r - 1] = 2; });
+    bombRounds.forEach(function (r) { if (r <= rounds) plan[r - 1].tier = 2; });
+
+    // Bomb rounds stay multiple choice: doubling your whole score on a coin
+    // flip is not a gamble, it is a shrug.
+    var eligible = [];
+    for (var j = 0; j < rounds; j++) {
+      if (bombRounds.indexOf(j + 1) === -1) eligible.push(j);
+    }
+    var wanted = Math.min(eligible.length, Math.round(rounds * TF_ROUND_SHARE));
+    shuffle(eligible).slice(0, wanted).forEach(function (j) { plan[j].tf = true; });
     return plan;
   }
 
@@ -299,11 +313,21 @@
 
   function stealTokensFor(rounds) { return Math.max(2, Math.round(rounds / 4)); }
   function playerCount() { return state.players.length; }
-  function currentPlayerIndex() { return state.turn % playerCount(); }
+  // Who goes first rotates by one seat each round, so the first-mover advantage
+  // (and the last seat's disadvantage) is shared out instead of falling on the
+  // same player all match. Round 1 runs 1-2-3-4, round 2 runs 2-3-4-1, and so on.
+  function playerIndexAtTurn(turn) {
+    var n = playerCount();
+    return (turn % n + Math.floor(turn / n)) % n;
+  }
+  function currentPlayerIndex() { return playerIndexAtTurn(state.turn); }
+  function nextPlayerIndex() { return playerIndexAtTurn(state.turn + 1); }
   function currentRound() { return Math.floor(state.turn / playerCount()) + 1; }
   function isBombRound() { return state.bombRounds.indexOf(currentRound()) !== -1; }
   function totalTurns() { return state.rounds * playerCount(); }
-  function currentTier() { return state.plan[currentRound() - 1] || 0; }
+  function currentPlanEntry() { return state.plan[currentRound() - 1] || { tier: 0, tf: false }; }
+  function currentTier() { return currentPlanEntry().tier; }
+  function isTrueFalseRound() { return currentPlanEntry().tf; }
   function opponentsOf(i) {
     return state.players.filter(function (p, j) { return j !== i; });
   }
@@ -312,17 +336,19 @@
   // Pick from the player's own band, honouring the topic the previous player
   // chose, and never repeating a question for that player. Each fallback widens
   // the search by one step rather than giving up.
-  function drawQuestion(p, topic, tier) {
+  function drawQuestion(p, topic, tier, wantTf) {
     var bank = window.BANK || [];
     var level = levelFor(p.band, tier);
     var fresh = bank.filter(function (q) { return !state.used[q.id]; });
-    var inBand = fresh.filter(function (q) { return q.d >= p.band[0] && q.d <= p.band[1]; });
+    var kind = fresh.filter(function (q) { return isTf(q) === !!wantTf; });
+    var inBand = kind.filter(function (q) { return q.d >= p.band[0] && q.d <= p.band[1]; });
 
     var tries = [
       inBand.filter(function (q) { return q.t === topic && q.d === level; }),
       inBand.filter(function (q) { return q.t === topic; }),
       inBand.filter(function (q) { return q.d === level; }),
       inBand,
+      kind,
       fresh,
       bank
     ];
@@ -444,22 +470,37 @@
     var pi = currentPlayerIndex();
     var p = state.players[pi];
     var tier = currentTier();
-    var raw = drawQuestion(p, state.nextTopic, tier);
+    var raw = drawQuestion(p, state.nextTopic, tier, isTrueFalseRound());
     if (!raw) return showResult();       // empty bank; nothing left to ask
     state.used[raw.id] = true;
 
     var text = raw[p.lang] || raw.en;
-    var opts = shuffle(text.a.map(function (t, i) { return { text: t, correct: i === raw.c }; }));
+    var tf = isTf(raw);
+    var opts, value;
+    if (tf) {
+      // True always sits first. Position leaks nothing, because whether the
+      // statement is true varies question to question.
+      opts = [
+        { text: T("tfTrue"), correct: raw.v === true },
+        { text: T("tfFalse"), correct: raw.v !== true }
+      ];
+      value = Math.round(TIER_VALUE[tier] * TF_VALUE_SHARE);
+    } else {
+      opts = shuffle(text.a.map(function (t, i) { return { text: t, correct: i === raw.c }; }));
+      value = TIER_VALUE[tier];
+    }
 
     state.pending = {
       raw: raw, opts: opts, armed: armed, victim: victim || null,
-      value: TIER_VALUE[tier], answered: false
+      tf: tf, value: value, answered: false
     };
     state.locked = false;
 
     $("q-topic").textContent = topicName(raw.t);
-    $("q-diff").textContent = T("diffTier", { n: raw.d }) + " · " + T("worth", { n: TIER_VALUE[tier] });
+    $("q-diff").textContent = T("diffTier", { n: raw.d }) + " · " + T("worth", { n: value });
     $("q-diff").className = "chip chip--t" + tier;
+    $("q-tf").hidden = !tf;
+    $("q-tf").textContent = T("tfBadge");
     $("q-bomb").hidden = !armed;
     $("q-bomb").textContent = T("bombArmed");
     $("q-steal").hidden = !victim;
@@ -472,6 +513,7 @@
 
     var box = $("answers");
     box.innerHTML = "";
+    box.className = "answers" + (tf ? " answers--tf" : "");
     opts.forEach(function (o, i) {
       var b = document.createElement("button");
       b.type = "button";
@@ -603,7 +645,7 @@
       + ((q.armed || q.victim) ? (right ? " is-boom" : " is-wiped") : "");
 
     var last = state.turn === totalTurns() - 1;
-    var nextP = state.players[(pi + 1) % playerCount()];
+    var nextP = state.players[nextPlayerIndex()];
     // Getting it right buys you the right to set the next player's topic.
     state.pending.awardTopicPick = right && !last;
     $("fb-next").textContent = last ? T("finish")
