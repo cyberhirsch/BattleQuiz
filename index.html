@@ -25,6 +25,13 @@
       <button class="uilang__btn" data-uilang="tr" type="button">Türkçe</button>
     </div>
 
+    <div class="card resume" id="resume-card" hidden>
+      <p class="resume__label" id="resume-label"></p>
+      <p class="resume__where" id="resume-where"></p>
+      <button class="btn btn--primary btn--big" id="resume-go" type="button"></button>
+      <button class="btn btn--ghost" id="resume-drop" type="button"></button>
+    </div>
+
     <form class="card setup" id="setup-form" autocomplete="off" novalidate>
       <h2 class="card__title" data-i18n="setup"></h2>
 
@@ -87,6 +94,8 @@
       <h2 class="bomb__title" id="bomb-title"></h2>
       <p class="bomb__text" id="bomb-text"></p>
       <p class="bomb__stake" id="bomb-stake"></p>
+      <p class="bomb__cost" id="bomb-cost"></p>
+      <p class="bomb__nothing" id="bomb-nothing" hidden></p>
       <div class="bomb__actions">
         <button class="btn btn--danger btn--big" id="bomb-risk" type="button"></button>
         <button class="btn btn--ghost" id="bomb-safe" type="button"></button>
@@ -100,7 +109,7 @@
       <div class="heist__icon" aria-hidden="true">💰</div>
       <h2 class="heist__title" id="steal-title"></h2>
       <p class="heist__text" id="steal-text"></p>
-      <p class="heist__pick" id="steal-pick"></p>
+      <p class="heist__pick" id="steal-pick" tabindex="-1"></p>
       <div class="heist__targets" id="steal-targets"></div>
       <button class="btn btn--ghost" id="steal-cancel" type="button"></button>
     </div>
@@ -112,7 +121,7 @@
       <div class="hud__players" id="hud-players"></div>
       <div class="hud__mid">
         <div class="hud__round" id="hud-round"></div>
-        <div class="timer" id="timer">
+        <div class="timer" id="timer" aria-hidden="true">
           <svg viewBox="0 0 40 40" aria-hidden="true">
             <circle class="timer__track" cx="20" cy="20" r="17"></circle>
             <circle class="timer__bar" id="timer-bar" cx="20" cy="20" r="17"></circle>
@@ -122,7 +131,7 @@
       </div>
     </div>
 
-    <div class="qwrap" id="qwrap">
+    <div class="qwrap" id="qwrap" aria-live="polite">
       <div class="qmeta">
         <span class="chip" id="q-topic"></span>
         <span class="chip" id="q-diff"></span>
@@ -130,11 +139,11 @@
         <span class="chip chip--bomb" id="q-bomb" hidden></span>
         <span class="chip chip--steal" id="q-steal" hidden></span>
       </div>
-      <h2 class="question" id="q-text"></h2>
+      <h2 class="question" id="q-text" tabindex="-1"></h2>
       <div class="answers" id="answers"></div>
     </div>
 
-    <div class="feedback" id="feedback" hidden>
+    <div class="feedback" id="feedback" role="status" aria-live="polite" hidden>
       <div class="feedback__verdict" id="fb-verdict"></div>
       <div class="feedback__detail" id="fb-detail"></div>
       <div class="feedback__delta" id="fb-delta"></div>
@@ -148,7 +157,7 @@
   <section class="screen" id="screen-topic">
     <div class="card topicpick">
       <div class="topicpick__icon" aria-hidden="true">🎯</div>
-      <h2 class="topicpick__title" id="tp-title"></h2>
+      <h2 class="topicpick__title" id="tp-title" tabindex="-1"></h2>
       <div class="topicpick__grid" id="tp-grid"></div>
     </div>
   </section>
@@ -158,7 +167,7 @@
     <div class="card result">
       <h2 class="card__title" id="res-title"></h2>
       <div class="result__crown" id="res-crown" aria-hidden="true">🏆</div>
-      <h3 class="result__winner" id="res-winner"></h3>
+      <h3 class="result__winner" id="res-winner" tabindex="-1"></h3>
       <div class="result__grid" id="res-grid"></div>
       <div class="result__actions">
         <button class="btn btn--primary btn--big" id="res-again" type="button"></button>

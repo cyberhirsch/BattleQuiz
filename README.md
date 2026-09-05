@@ -54,17 +54,27 @@ which topic is coming and who picked it.
 A few rounds per match are bomb rounds — the same rounds for everyone, always at
 the hardest tier. When one comes up you choose:
 
-- **Risk it** — answer correctly and your total score *doubles*; answer wrong
-  and it drops to *zero*.
+- **Risk it** — answer correctly and your total score *doubles*, up to a cap of
+  +1500; answer wrong and it drops to *zero*, and you lose a steal token too.
 - **Play it safe** — normal scoring, no gamble.
+
+The cap matters. Uncapped doubling compounds: four wins in a row is sixteen
+times your score, and in testing that put one player on 17,000 while everything
+else the game does — topics, steals, streaks — became rounding error. The same
+match now peaks around 1,200.
+
+A player with no points *and* no steal tokens is not offered the gamble at all.
+With nothing to lose it was free, so it was not a decision.
 
 ### 💰 Steal
 
 Each player gets a steal token for every four rounds. Spend one before a
-question and choose which opponent to rob: the target is 30% of their score
-(minimum 100 points), shown before you commit. Answer correctly and those points
-move from their pile to yours, on top of your normal winnings. Answer wrong and
-they pocket half the amount instead.
+question and choose which opponent to rob. The amount is fixed at 1.5× the
+round's value — not a share of their score, which made robbing the leader always
+correct and turned the target screen into a choice with one right answer. Now
+you pick who you actually want to hurt. Answer correctly and those points move
+from their pile to yours, on top of your normal winnings. Answer wrong and they
+pocket half instead.
 
 Steals aren't offered on bomb rounds, or when nobody has points worth taking —
 if the button is missing, that's why, not a bug.
@@ -137,12 +147,23 @@ assets/js/audio.js            synthesised sound effects (no audio files)
 assets/js/game.js             turn order, scoring, topics, bomb, steal, timer
 ```
 
+### Sudden death
+
+A drawn match does not just stop. Everyone level on the top score answers one
+hard question in turn; whoever is the only one right takes it. If several are
+right they go again against each other, if none are the same field repeats, and
+after five rounds the draw stands.
+
 ## Notes
 
 - Keyboard: `1`–`4` pick an answer, `Enter` or `Space` advances.
 - Player names, ages, languages, match length and sound are remembered in
   `localStorage`.
-- A player sitting on zero points takes a bomb gamble for free — there is
-  nothing to lose. That is deliberate: it gives whoever is behind a way back in.
+- A match survives a refresh. Progress is written to `localStorage` after every
+  turn, and the setup screen offers to resume it.
+- Questions asked in recent matches are remembered (the last 400) and avoided,
+  so playing twice in a row does not serve the same ones again.
+- Screen changes move keyboard focus to the new screen's landing point, and the
+  question and feedback panels are `aria-live` regions.
 - Sound is synthesised with the Web Audio API, so there are no media files.
 - Respects `prefers-reduced-motion`.

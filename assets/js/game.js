@@ -25,10 +25,10 @@
   var TIME_BONUS_SHARE = 0.5;
   var STREAK_BONUS = 20;
   var MAX_STREAK_BONUS = 100;
-  var BOMB_FLOOR = 200;
-  var STEAL_SHARE = 0.3;
-  var STEAL_MIN = 100;
-  var STEAL_FAIL_SHARE = 0.5;
+  var BOMB_FLOOR = 200;          // payout when a bomb is won from a zero score
+  var BOMB_MAX_GAIN = 1500;      // doubling is capped here, or it compounds away
+  var STEAL_TIER_MULTIPLE = 1.5; // a heist takes this much of the round's value...
+  var STEAL_FAIL_SHARE = 0.5;    // ...and a botched one hands the target half of it
   var RING = 2 * Math.PI * 17;
 
   /* ---------- helpers ---------- */
@@ -72,6 +72,8 @@
     plan: [],          // one tier per round, shared by everyone
     turn: 0,
     used: {},          // question ids already asked this match, by anyone
+    recent: {},        // ids asked in recent matches, avoided when possible
+    recentList: [],
     nextTopic: null,   // topic the upcoming player must answer
     topicChooser: null,
     pending: null,
@@ -83,12 +85,84 @@
 
   /* ---------- persistence ---------- */
   var STORE = "battlequiz.setup.v2";
+  var RECENT_STORE = "battlequiz.recent.v1";
+  var RECENT_CAP = 400;          // ids remembered across matches
+  var MATCH_STORE = "battlequiz.match.v1";
   function saveSetup(cfg) { try { localStorage.setItem(STORE, JSON.stringify(cfg)); } catch (e) {} }
   function loadSetup() { try { return JSON.parse(localStorage.getItem(STORE) || "null"); } catch (e) { return null; } }
+
+  // Questions asked in recent matches, so playing twice in a row does not serve
+  // the same ones again. Kept as a list so the oldest fall off first.
+  function loadRecent() {
+    try {
+      var a = JSON.parse(localStorage.getItem(RECENT_STORE) || "[]");
+      return Array.isArray(a) ? a : [];
+    } catch (e) { return []; }
+  }
+  function rememberAsked(id) {
+    state.recent[id] = true;
+    state.recentList.push(id);
+    while (state.recentList.length > RECENT_CAP) delete state.recent[state.recentList.shift()];
+    try { localStorage.setItem(RECENT_STORE, JSON.stringify(state.recentList)); } catch (e) {}
+  }
+
+  // Enough to rebuild the match after a refresh. Everything here is plain data.
+  function saveMatch() {
+    if (!state.players.length || state.turn >= totalTurns()) return clearMatch();
+    try {
+      localStorage.setItem(MATCH_STORE, JSON.stringify({
+        players: state.players, rounds: state.rounds, plan: state.plan,
+        bombRounds: state.bombRounds, turn: state.turn, used: state.used,
+        nextTopic: state.nextTopic, topicChooser: state.topicChooser
+      }));
+    } catch (e) {}
+  }
+  function loadMatch() {
+    try {
+      var m = JSON.parse(localStorage.getItem(MATCH_STORE) || "null");
+      if (!m || !m.players || m.players.length < MIN_PLAYERS) return null;
+      if (!(m.turn >= 0) || m.turn >= m.rounds * m.players.length) return null;
+      return m;
+    } catch (e) { return null; }
+  }
+  function clearMatch() { try { localStorage.removeItem(MATCH_STORE); } catch (e) {} }
+
+  function resumeMatch(m) {
+    state.players = m.players;
+    state.rounds = m.rounds;
+    state.plan = m.plan;
+    state.bombRounds = m.bombRounds;
+    state.turn = m.turn;
+    state.used = m.used || {};
+    state.nextTopic = m.nextTopic;
+    state.topicChooser = m.topicChooser;
+    state.recentList = loadRecent();
+    state.recent = {};
+    state.recentList.forEach(function (id) { state.recent[id] = true; });
+    window.SFX.unlock();
+    nextTurn();
+  }
+
+  // Screen changes are invisible to a screen reader unless focus moves, so send
+  // it to each screen's landing point. On the quiz that is the question itself,
+  // not an answer button - focusing a button would arm Enter and let a stray
+  // keypress answer for you.
+  var LANDING = {
+    "screen-handover": "ho-go",
+    "screen-bomb": "bomb-risk",
+    "screen-steal": "steal-pick",
+    "screen-quiz": "q-text",
+    "screen-topic": "tp-title",
+    "screen-result": "res-winner"
+  };
 
   function show(id) {
     qsa(".screen").forEach(function (s) { s.classList.toggle("is-active", s.id === id); });
     window.scrollTo(0, 0);
+    var target = $(LANDING[id]);
+    if (target && !target.hidden) {
+      try { target.focus({ preventScroll: true }); } catch (e) { target.focus(); }
+    }
   }
 
   /* ---------- setup screen ---------- */
@@ -168,6 +242,22 @@
     });
     $("opt-sound").textContent = T(window.SFX.isEnabled() ? "on" : "off");
     renderSetup();
+    renderResume();
+  }
+
+  function renderResume() {
+    var m = loadMatch();
+    var card = $("resume-card");
+    card.hidden = !m;
+    if (!m) return;
+    var n = m.players.length;
+    var who = m.players[(m.turn % n + Math.floor(m.turn / n)) % n];
+    $("resume-label").textContent = T("resume");
+    $("resume-where").textContent = T("resumeRound", {
+      name: who.name, n: Math.floor(m.turn / n) + 1, total: m.rounds
+    });
+    $("resume-go").textContent = T("go");
+    $("resume-drop").textContent = T("discardMatch");
   }
 
   function initSetup() {
@@ -205,6 +295,16 @@
     $("setup-form").addEventListener("submit", function (ev) {
       ev.preventDefault();
       startMatch();
+    });
+    $("resume-go").addEventListener("click", function () {
+      var m = loadMatch();
+      window.SFX.click();
+      if (m) resumeMatch(m); else renderResume();
+    });
+    $("resume-drop").addEventListener("click", function () {
+      window.SFX.click();
+      clearMatch();
+      renderResume();
     });
     applyStaticI18n();
   }
@@ -277,7 +377,11 @@
     state.bombRounds = bombRoundsFor(state.rounds, $("opt-bomb").value);
     state.plan = buildPlan(state.rounds, state.bombRounds);
     state.turn = 0;
+    state.tb = null;
     state.used = {};
+    state.recentList = loadRecent();
+    state.recent = {};
+    state.recentList.forEach(function (id) { state.recent[id] = true; });
     state.nextTopic = null;
     state.topicChooser = null;
 
@@ -321,13 +425,19 @@
     return (turn % n + Math.floor(turn / n)) % n;
   }
   function currentPlayerIndex() { return playerIndexAtTurn(state.turn); }
+  function activePlayer() {
+    return state.tb ? state.tb.players[state.tb.idx] : state.players[currentPlayerIndex()];
+  }
+  function activeIndex() { return state.players.indexOf(activePlayer()); }
   function nextPlayerIndex() { return playerIndexAtTurn(state.turn + 1); }
   function currentRound() { return Math.floor(state.turn / playerCount()) + 1; }
   function isBombRound() { return state.bombRounds.indexOf(currentRound()) !== -1; }
   function totalTurns() { return state.rounds * playerCount(); }
   function currentPlanEntry() { return state.plan[currentRound() - 1] || { tier: 0, tf: false }; }
-  function currentTier() { return currentPlanEntry().tier; }
-  function isTrueFalseRound() { return currentPlanEntry().tf; }
+  // Sudden death is always at the hardest tier, and never true-or-false: a coin
+  // flip is no way to settle a drawn match.
+  function currentTier() { return state.tb ? 2 : currentPlanEntry().tier; }
+  function isTrueFalseRound() { return state.tb ? false : currentPlanEntry().tf; }
   function opponentsOf(i) {
     return state.players.filter(function (p, j) { return j !== i; });
   }
@@ -340,17 +450,23 @@
     var bank = window.BANK || [];
     var level = levelFor(p.band, tier);
     var fresh = bank.filter(function (q) { return !state.used[q.id]; });
-    var kind = fresh.filter(function (q) { return isTf(q) === !!wantTf; });
-    var inBand = kind.filter(function (q) { return q.d >= p.band[0] && q.d <= p.band[1]; });
+    // Two passes: everything not seen in a recent match, then everything.
+    var unseen = fresh.filter(function (q) { return !state.recent[q.id]; });
+    return bestOf(unseen, p, topic, level, wantTf)
+        || bestOf(fresh, p, topic, level, wantTf)
+        || (bank.length ? pick(bank) : null);
+  }
 
+  function bestOf(pool, p, topic, level, wantTf) {
+    var kind = pool.filter(function (q) { return isTf(q) === !!wantTf; });
+    var inBand = kind.filter(function (q) { return q.d >= p.band[0] && q.d <= p.band[1]; });
     var tries = [
       inBand.filter(function (q) { return q.t === topic && q.d === level; }),
       inBand.filter(function (q) { return q.t === topic; }),
       inBand.filter(function (q) { return q.d === level; }),
       inBand,
       kind,
-      fresh,
-      bank
+      pool
     ];
     for (var i = 0; i < tries.length; i++) {
       if (tries[i].length) return pick(tries[i]);
@@ -361,6 +477,7 @@
   /* ---------- turn ---------- */
   function nextTurn() {
     if (state.turn >= totalTurns()) return showResult();
+    saveMatch();
     var pi = currentPlayerIndex();
     var p = state.players[pi];
     state.uiLang = p.lang;
@@ -399,16 +516,30 @@
   });
 
   /* ---------- bomb ---------- */
+  // Winning doubles your score, but the gain is capped: uncapped doubling
+  // compounds, and four wins in a row made every other rule in the game noise.
+  function bombWinScore(before) {
+    return before > 0 ? before + Math.min(before, BOMB_MAX_GAIN) : BOMB_FLOOR;
+  }
+
   function showBombChoice() {
     var p = state.players[currentPlayerIndex()];
-    var win = p.score > 0 ? p.score * 2 : BOMB_FLOOR;
     $("bomb-title").textContent = T("bombIncoming");
     $("bomb-text").innerHTML = T("bombExplain");
-    $("bomb-stake").textContent = "✅ " + p.score + " → " + win + "   ❌ " + p.score + " → 0";
+    $("bomb-stake").textContent = "✅ " + p.score + " → " + bombWinScore(p.score)
+      + "   ❌ " + p.score + " → 0";
+    // With nothing to lose the gamble is free, so it is not a decision. A player
+    // on zero can still take it, but only while they have a steal token to burn.
+    var canRisk = p.score > 0 || p.steals > 0;
     $("bomb-risk").textContent = T("bombRisk");
+    $("bomb-risk").hidden = !canRisk;
+    $("bomb-nothing").hidden = canRisk;
+    $("bomb-nothing").textContent = T("bombNothingToLose");
+    $("bomb-cost").textContent = p.steals > 0 ? T("bombCost") : "";
     $("bomb-safe").textContent = T("bombSafe");
     window.SFX.fuse();
     show("screen-bomb");
+    if (!canRisk) $("bomb-safe").focus();
   }
   $("bomb-risk").addEventListener("click", function () {
     window.SFX.bomb();
@@ -421,9 +552,11 @@
   });
 
   /* ---------- steal ---------- */
-  function stealAmountFrom(victim) {
-    return Math.min(victim.score, Math.max(STEAL_MIN, Math.round(victim.score * STEAL_SHARE)));
-  }
+  // A flat amount tied to the round's stakes. Taking a share of the target's
+  // score made robbing the leader strictly best, so the target screen offered a
+  // choice with only one right answer.
+  function stealValue() { return Math.round(TIER_VALUE[currentTier()] * STEAL_TIER_MULTIPLE); }
+  function stealAmountFrom(victim) { return Math.min(victim.score, stealValue()); }
   function stealTargets(pi) {
     return opponentsOf(pi).filter(function (o) { return o.score > 0; });
   }
@@ -467,12 +600,13 @@
 
   /* ---------- question ---------- */
   function beginQuestion(armed, victim) {
-    var pi = currentPlayerIndex();
+    var pi = activeIndex();
     var p = state.players[pi];
     var tier = currentTier();
     var raw = drawQuestion(p, state.nextTopic, tier, isTrueFalseRound());
     if (!raw) return showResult();       // empty bank; nothing left to ask
     state.used[raw.id] = true;
+    rememberAsked(raw.id);
 
     var text = raw[p.lang] || raw.en;
     var tf = isTf(raw);
@@ -506,7 +640,9 @@
     $("q-steal").hidden = !victim;
     $("q-steal").textContent = T("stealArmed");
     $("q-text").textContent = text.q;
-    $("hud-round").textContent = T("round", { n: currentRound(), total: state.rounds });
+    $("hud-round").textContent = state.tb
+      ? T("tieBreakRound", { n: state.tb.round })
+      : T("round", { n: currentRound(), total: state.rounds });
     $("quit-btn").textContent = T("quit");
     document.body.classList.toggle("is-armed", !!armed);
     document.body.classList.toggle("is-heist", !!victim);
@@ -536,7 +672,7 @@
     hud.className = "hud__players is-n" + playerCount();
     state.players.forEach(function (p, i) {
       var el = document.createElement("div");
-      el.className = "hud__side" + (i === currentPlayerIndex() ? " is-active" : "");
+      el.className = "hud__side" + (i === activeIndex() ? " is-active" : "");
       el.setAttribute("data-seat", i);
       var tags = [];
       if (p.streak > 1) tags.push("🔥 " + p.streak);
@@ -580,7 +716,7 @@
     stopTimer();
 
     var q = state.pending;
-    var pi = currentPlayerIndex();
+    var pi = activeIndex();
     var p = state.players[pi];
     var timedOut = index === -1;
     var right = !timedOut && q.opts[index].correct;
@@ -591,6 +727,8 @@
       else if (i === index) b.classList.add("is-wrong");
     });
 
+    if (state.tb) return resolveTieBreak(q, p, right, timedOut);
+
     var before = p.score;
     var delta = "";
 
@@ -599,7 +737,7 @@
       p.streak++;
       if (p.streak > p.bestStreak) p.bestStreak = p.streak;
       if (q.armed) {
-        p.score = before > 0 ? before * 2 : BOMB_FLOOR;
+        p.score = bombWinScore(before);
         delta = T("doubled", { from: before, to: p.score });
         window.SFX.doubled();
       } else {
@@ -623,7 +761,11 @@
       p.streak = 0;
       if (q.armed) {
         p.score = 0;
+        // Losing a token is what makes the gamble cost something even at zero.
+        var lostToken = p.steals > 0;
+        if (lostToken) p.steals--;
         delta = before > 0 ? T("wiped", { from: before }) : T("noChange");
+        if (lostToken) delta += " " + T("bombTokenLost");
         window.SFX.bomb();
       } else if (q.victim) {
         var penalty = Math.round(stealAmountFrom(q.victim) * STEAL_FAIL_SHARE);
@@ -651,12 +793,14 @@
     $("fb-next").textContent = last ? T("finish")
       : (right ? T("pickTopicShort") : T("nextPlayer", { name: nextP.name }));
     $("feedback").hidden = false;
+    $("fb-next").focus({ preventScroll: true });
     renderHud();
     document.body.classList.remove("is-armed", "is-heist");
   }
 
   $("fb-next").addEventListener("click", function () {
     window.SFX.click();
+    if (state.tb) { state.pending = null; return tieBreakTurn(); }
     var pick = state.pending && state.pending.awardTopicPick;
     var chooser = state.players[currentPlayerIndex()];
     state.turn++;
@@ -693,19 +837,92 @@
   $("quit-btn").addEventListener("click", function () {
     if (window.confirm(T("quitConfirm"))) {
       stopTimer();
+      clearMatch();
+      state.tb = null;
       document.body.classList.remove("is-armed", "is-heist");
       show("screen-setup");
       applyStaticI18n();
     }
   });
 
+  /* ---------- sudden death ---------- */
+  var TB_MAX_ROUNDS = 5;
+
+  function startTieBreak(contenders) {
+    state.tb = { players: contenders, idx: 0, round: 1, right: [] };
+    tieBreakTurn();
+  }
+
+  function tieBreakTurn() {
+    var tb = state.tb;
+    if (tb.idx >= tb.players.length) {
+      // Everyone level has answered. One right answer settles it; several
+      // survivors go again against each other; none, and the same field repeats.
+      if (tb.right.length === 1) { var w = tb.right[0]; state.tb = null; return showResult(w); }
+      if (tb.round >= TB_MAX_ROUNDS) { state.tb = null; return showResult(null); }
+      tb.players = tb.right.length ? tb.right : tb.players;
+      tb.right = [];
+      tb.idx = 0;
+      tb.round++;
+    }
+    var p = tb.players[tb.idx];
+    state.uiLang = p.lang;
+    document.documentElement.lang = p.lang;
+    state.nextTopic = pick(TOPICS);
+    state.topicChooser = null;
+
+    $("ho-pass").textContent = T("passDevice", { name: p.name });
+    $("ho-name").textContent = T("ready", { name: p.name });
+    $("ho-hint").textContent = T("tieBreakWho", {
+      names: tb.players.map(function (x) { return x.name; }).join(", ")
+    });
+    $("ho-topic").textContent = T("topicIs", { topic: topicName(state.nextTopic) });
+    $("ho-topic-by").textContent = T("tieBreak");
+    $("ho-round").textContent = T("tieBreakRound", { n: tb.round })
+      + " · " + T("score") + ": " + p.score;
+    $("ho-go").textContent = T("go");
+    $("ho-steal").hidden = true;
+    $("ho-steals").textContent = "";
+    show("screen-handover");
+  }
+
+  function resolveTieBreak(q, p, right, timedOut) {
+    var tb = state.tb;
+    if (right) tb.right.push(p);
+    var correctText = q.opts.filter(function (o) { return o.correct; })[0].text;
+    $("fb-verdict").textContent = right ? T("correct") : (timedOut ? T("timeUp") : T("wrong"));
+    $("fb-verdict").className = "feedback__verdict " + (right ? "is-good" : "is-bad");
+    $("fb-detail").textContent = right ? "" : T("theAnswerWas", { answer: correctText });
+
+    tb.idx++;
+    var last = tb.idx >= tb.players.length;
+    var decided = last && tb.right.length === 1;
+    $("fb-delta").textContent = decided ? "" : (last ? T("tieBreakAgain") : "");
+    $("fb-delta").className = "feedback__delta";
+    $("fb-next").textContent = decided || (last && tb.round >= TB_MAX_ROUNDS)
+      ? T("finish")
+      : T("nextPlayer", { name: (last ? (tb.right.length ? tb.right : tb.players) : tb.players)[last ? 0 : tb.idx].name });
+    $("feedback").hidden = false;
+    $("fb-next").focus({ preventScroll: true });
+    renderHud();
+    document.body.classList.remove("is-armed", "is-heist");
+  }
+
   /* ---------- result ---------- */
-  function showResult() {
+  function showResult(forcedWinner) {
     stopTimer();
+    clearMatch();
     document.body.classList.remove("is-armed", "is-heist");
     var ranked = state.players.slice().sort(function (a, b) { return b.score - a.score; });
-    var top = ranked[0];
-    var tie = ranked.filter(function (p) { return p.score === top.score; }).length > 1;
+    var level = ranked.filter(function (p) { return p.score === ranked[0].score; });
+
+    // A drawn match goes to sudden death rather than just stopping. forcedWinner
+    // is how the tie-break reports back: a player, or null when it ran out of
+    // rounds and the draw stands.
+    if (forcedWinner === undefined && level.length > 1) return startTieBreak(level);
+
+    var top = forcedWinner || ranked[0];
+    var tie = forcedWinner === null || (forcedWinner === undefined && level.length > 1);
 
     state.uiLang = top.lang;
     document.documentElement.lang = state.uiLang;
@@ -720,6 +937,7 @@
     ranked.forEach(function (p) {
       var card = document.createElement("div");
       card.className = "rescard" + (!tie && p === top ? " is-winner" : "");
+      if (!tie && p === top) card.setAttribute("data-winner", "1");
       card.innerHTML = '<div class="rescard__name"></div><div class="rescard__score"></div><ul class="rescard__stats"></ul>';
       card.querySelector(".rescard__name").textContent =
         p.name + " · " + window.I18N[p.lang].langName + " · " + p.age
