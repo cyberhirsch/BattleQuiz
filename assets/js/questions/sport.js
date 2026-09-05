@@ -1,4 +1,8 @@
-/* BattleQuiz - Sport.
+/* BattleQuiz - Sports.
+ * Players see this topic as "Sports", but every question in it is about
+ * Formula 1. It is deliberately the gentlest ladder in the game: even level 8
+ * stays within reach of a regular race viewer, and no answer here depends on
+ * a record or line-up that changes between seasons.
  * Each entry carries both languages; `c` is the index of the correct option
  * in BOTH arrays, and `d` is the difficulty level 1-8.
  */

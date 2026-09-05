@@ -38,11 +38,12 @@ out counts as wrong.
 
 ### 🎯 Topic control
 
-There are ten topics: Science, Animals & Nature, Geography, History, Formula 1,
+There are ten topics: Science, Animals & Nature, Geography, History, Sports,
 Music & Art, Film & TV, Books & Words, Technology, Everyday Life.
 
-Formula 1 is deliberately the gentlest topic: its questions stay approachable
-all the way up to level 8, so picking it for an opponent is not a punishment.
+Sports is Formula 1 only, and deliberately the gentlest topic: its questions
+stay approachable all the way up to level 8, so picking it for an opponent is
+not a punishment.
 
 **Answer correctly and you choose the topic the next player has to face.** Get
 it wrong and their topic is drawn at random. The hand-over screen always says
