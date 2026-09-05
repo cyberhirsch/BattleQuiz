@@ -1,0 +1,24 @@
+/* BattleQuiz - Sport. */
+window.BANK = window.BANK || [];
+window.BANK.push(
+{ id:"spo01", t:"sport", d:1, c:0, en:{q:"Which sport do you play with a ball and two goals?",a:["Football","Chess","Swimming","Darts"]}, tr:{q:"Top ve iki kale ile oynanan spor hangisidir?",a:["Futbol","Satranç","Yüzme","Dart"]} },
+{ id:"spo02", t:"sport", d:1, c:0, en:{q:"In which sport do you swim in a pool?",a:["Swimming","Cycling","Boxing","Golf"]}, tr:{q:"Havuzda yapılan spor hangisidir?",a:["Yüzme","Bisiklet","Boks","Golf"]} },
+{ id:"spo03", t:"sport", d:2, c:0, en:{q:"How many players from one team are on the pitch in football?",a:["Eleven","Ten","Twelve","Nine"]}, tr:{q:"Futbolda bir takımdan sahada kaç oyuncu bulunur?",a:["On bir","On","On iki","Dokuz"]} },
+{ id:"spo04", t:"sport", d:2, c:0, en:{q:"Which of these is a winter sport?",a:["Skiing","Tennis","Rowing","Surfing"]}, tr:{q:"Bunlardan hangisi bir kış sporudur?",a:["Kayak","Tenis","Kürek","Sörf"]} },
+{ id:"spo05", t:"sport", d:3, c:0, en:{q:"How many rings are on the Olympic flag?",a:["Five","Four","Six","Three"]}, tr:{q:"Olimpiyat bayrağında kaç halka vardır?",a:["Beş","Dört","Altı","Üç"]} },
+{ id:"spo06", t:"sport", d:3, c:0, en:{q:"How long is a normal football match?",a:["90 minutes","60 minutes","80 minutes","120 minutes"]}, tr:{q:"Normal bir futbol maçı kaç dakikadır?",a:["90 dakika","60 dakika","80 dakika","120 dakika"]} },
+{ id:"spo07", t:"sport", d:3, c:0, en:{q:"How many points is a normal basket from close range worth?",a:["Two","One","Three","Four"]}, tr:{q:"Yakın mesafeden atılan normal bir basket kaç sayıdır?",a:["İki","Bir","Üç","Dört"]} },
+{ id:"spo08", t:"sport", d:4, c:0, en:{q:"Which sport is played with a shuttlecock?",a:["Badminton","Squash","Table tennis","Lacrosse"]}, tr:{q:"Hangi spor tüylü topla (raket topu) oynanır?",a:["Badminton","Squash","Masa tenisi","Lakros"]} },
+{ id:"spo09", t:"sport", d:4, c:0, en:{q:"Which chess piece moves only diagonally?",a:["The bishop","The rook","The knight","The king"]}, tr:{q:"Satrançta hangi taş yalnızca çapraz hareket eder?",a:["Fil","Kale","At","Şah"]} },
+{ id:"spo10", t:"sport", d:4, c:0, en:{q:"How often are the Summer Olympic Games held?",a:["Every four years","Every two years","Every year","Every five years"]}, tr:{q:"Yaz Olimpiyat Oyunları kaç yılda bir düzenlenir?",a:["Dört yılda bir","İki yılda bir","Her yıl","Beş yılda bir"]} },
+{ id:"spo11", t:"sport", d:5, c:0, en:{q:"In which country did the modern game of golf originate?",a:["Scotland","England","Ireland","The Netherlands"]}, tr:{q:"Modern golf hangi ülkede doğdu?",a:["İskoçya","İngiltere","İrlanda","Hollanda"]} },
+{ id:"spo12", t:"sport", d:5, c:0, en:{q:"How many players are in a volleyball team on court?",a:["Six","Five","Seven","Eight"]}, tr:{q:"Voleybolda sahada bir takımda kaç oyuncu bulunur?",a:["Altı","Beş","Yedi","Sekiz"]} },
+{ id:"spo13", t:"sport", d:5, c:0, en:{q:"Which country won the 1966 FIFA World Cup?",a:["England","West Germany","Brazil","Italy"]}, tr:{q:"1966 FIFA Dünya Kupası'nı hangi ülke kazandı?",a:["İngiltere","Batı Almanya","Brezilya","İtalya"]} },
+{ id:"spo14", t:"sport", d:6, c:0, en:{q:"Which country hosted the 1992 Summer Olympics?",a:["Spain","The United States","South Korea","Australia"]}, tr:{q:"1992 Yaz Olimpiyatları'na hangi ülke ev sahipliği yaptı?",a:["İspanya","ABD","Güney Kore","Avustralya"]} },
+{ id:"spo15", t:"sport", d:6, c:0, en:{q:"In tennis, what is a score of zero called?",a:["Love","Nil","Duck","Blank"]}, tr:{q:"Teniste sıfır sayısına ne denir?",a:["Love","Nil","Duck","Blank"]} },
+{ id:"spo16", t:"sport", d:6, c:0, en:{q:"Which Turkish club was the first to win a major UEFA trophy?",a:["Galatasaray","Fenerbahçe","Beşiktaş","Trabzonspor"]}, tr:{q:"Büyük bir UEFA kupasını kazanan ilk Türk kulübü hangisidir?",a:["Galatasaray","Fenerbahçe","Beşiktaş","Trabzonspor"]} },
+{ id:"spo17", t:"sport", d:7, c:0, en:{q:"How many Formula 1 world titles did Ayrton Senna win?",a:["Three","One","Two","Four"]}, tr:{q:"Ayrton Senna kaç Formula 1 dünya şampiyonluğu kazandı?",a:["Üç","Bir","İki","Dört"]} },
+{ id:"spo18", t:"sport", d:7, c:0, en:{q:"In cricket, what is a score of zero by a batter called?",a:["A duck","A blank","A love","A nil"]}, tr:{q:"Kriket'te bir vurucunun sıfır sayısına ne ad verilir?",a:["Duck","Blank","Love","Nil"]} },
+{ id:"spo19", t:"sport", d:8, c:0, en:{q:"Which city hosted the first modern Olympic Games in 1896?",a:["Athens","Paris","London","Rome"]}, tr:{q:"1896'daki ilk modern Olimpiyat Oyunları hangi şehirde yapıldı?",a:["Atina","Paris","Londra","Roma"]} },
+{ id:"spo20", t:"sport", d:8, c:0, en:{q:"In the Tour de France, what does the polka-dot jersey mark?",a:["Best climber","Overall leader","Best sprinter","Best young rider"]}, tr:{q:"Fransa Bisiklet Turu'nda puantiyeli forma neyi gösterir?",a:["En iyi tırmanıcı","Genel lider","En iyi sprinter","En iyi genç sporcu"]} }
+);
