@@ -71,10 +71,10 @@ if the button is missing, that's why, not a bug.
 
 ## Question bank
 
-The bank holds **1,181 questions** — multiple-choice and true-or-false mixed
-together — spread across ten topics and all eight difficulty levels. Questions
-live in `assets/js/questions/`, one file per topic. Each entry carries both
-languages:
+The bank holds **1,365 questions** — 964 multiple-choice and 401 true-or-false
+(201 true, 200 false) — spread across ten topics and all eight difficulty
+levels, between 120 and 176 per topic. Questions live in
+`assets/js/questions/`, one file per topic. Each entry carries both languages:
 
 ```js
 { id:"sci05", t:"science", d:3, c:0,
