@@ -303,3 +303,13 @@ input:focus, select:focus, button:focus-visible { outline: 2px solid var(--seat2
 /* Landing points take focus on a screen change; show a ring only for keyboards. */
 [tabindex="-1"]:focus { outline: none; }
 [tabindex="-1"]:focus-visible { outline: 2px solid var(--seat2); outline-offset: 4px; border-radius: 6px; }
+
+/* ---------- explanation line ---------- */
+.feedback__why {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--panel-line);
+  color: var(--ink-dim);
+  font-size: .86rem;
+  line-height: 1.5;
+}

@@ -708,6 +708,15 @@
     $("timer").classList.toggle("is-low", state.timeLeft <= 5);
   }
 
+  // Not every question has an explanation yet, so this hides the line rather
+  // than leaving a blank gap when one is missing.
+  function renderWhy(raw, lang) {
+    var ex = raw.ex && (raw.ex[lang] || raw.ex.en);
+    var el = $("fb-why");
+    el.textContent = ex || "";
+    el.hidden = !ex;
+  }
+
   /* ---------- answering ---------- */
   function answer(index) {
     if (state.locked || !state.pending || state.pending.answered) return;
@@ -782,6 +791,7 @@
     $("fb-verdict").textContent = right ? T("correct") : (timedOut ? T("timeUp") : T("wrong"));
     $("fb-verdict").className = "feedback__verdict " + (right ? "is-good" : "is-bad");
     $("fb-detail").textContent = right ? "" : T("theAnswerWas", { answer: correctText });
+    renderWhy(q.raw, p.lang);
     $("fb-delta").textContent = delta;
     $("fb-delta").className = "feedback__delta"
       + ((q.armed || q.victim) ? (right ? " is-boom" : " is-wiped") : "");
@@ -893,6 +903,7 @@
     $("fb-verdict").textContent = right ? T("correct") : (timedOut ? T("timeUp") : T("wrong"));
     $("fb-verdict").className = "feedback__verdict " + (right ? "is-good" : "is-bad");
     $("fb-detail").textContent = right ? "" : T("theAnswerWas", { answer: correctText });
+    renderWhy(q.raw, p.lang);
 
     tb.idx++;
     var last = tb.idx >= tb.players.length;

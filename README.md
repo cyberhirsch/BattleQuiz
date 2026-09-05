@@ -83,13 +83,14 @@ if the button is missing, that's why, not a bug.
 
 The bank holds **1,365 questions** — 964 multiple-choice and 401 true-or-false
 (201 true, 200 false) — spread across ten topics and all eight difficulty
-levels, between 120 and 176 per topic. Questions live in
+levels, between 120 and 176 per topic. The 883 questions at levels 1-5 also
+carry a bilingual explanation, shown after you answer. Questions live in
 `assets/js/questions/`, one file per topic. Each entry carries both languages:
 
 ```js
-{ id:"sci05", t:"science", d:3, c:0,
-  en:{ q:"What is the chemical formula for water?", a:["H₂O","CO₂","O₂","NaCl"] },
-  tr:{ q:"Suyun kimyasal formülü nedir?",           a:["H₂O","CO₂","O₂","NaCl"] } }
+{ id:"sci039", t:"science", d:3, c:0,
+  en:{ q:"Which planet is known as the Red Planet?", a:["Mars","Venus","Mercury","Jupiter"] },
+  tr:{ q:"Hangi gezegen Kızıl Gezegen olarak bilinir?", a:["Mars","Venüs","Merkür","Jüpiter"] } }
 ```
 
 - `id` — unique, used to avoid repeats within a match
@@ -100,6 +101,32 @@ levels, between 120 and 176 per topic. Questions live in
 Options are shuffled at runtime, so the correct answer never sits in a
 predictable slot. A question is spent for the whole match once anyone has been
 asked it — on a shared device everybody hears it.
+
+A true-or-false entry (`k:"tf"`) carries no options at all — the two buttons
+come from the UI strings, so they always read in the player's own language.
+`v` says whether the statement is true:
+
+```js
+{ id:"sci037", t:"science", d:3, k:"tf", v:true,
+  en:{ q:"Sound travels faster through water than through air." },
+  tr:{ q:"Ses suda havadakinden daha hızlı yayılır." } }
+```
+
+### Explanations
+
+Every question at levels 1–5 — 883 of them — also carries an `ex` field: a
+one-line bilingual explanation shown under the answer once you've responded,
+whether you got it right or not:
+
+```js
+ex:{ en:"Mars looks red because its surface is covered in iron oxide, the same rust you see on old metal.",
+     tr:"Mars kırmızı görünür çünkü yüzeyi, eski metallerde gördüğün pas gibi demir oksitle kaplıdır." }
+```
+
+Levels 6–8 have none, on purpose: that range is where adult players land, and
+the line was written to raise a child's chance of learning something from a
+wrong answer, not to annotate specialist trivia. `ex` is entirely optional —
+a question without it simply shows no explanation line.
 
 ### How the bank was built
 
